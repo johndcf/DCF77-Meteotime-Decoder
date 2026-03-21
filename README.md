@@ -171,6 +171,12 @@ Meteotime is a commercial service and its data format may be subject to intellec
 This project is intended for **educational and research purposes only**.
 It demonstrates the decoding of publicly received DCF77 signals.
 
+## 🔄 Decoding Pipeline
+
+<p align="center">
+  <img src="decode_pipeline.png" width="700">
+</p>
+
 The author is not affiliated with, endorsed by, or connected to Meteotime or any related services.
 
 Any use of this project is at your own responsibility.
