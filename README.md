@@ -7,15 +7,6 @@
 ![Status](https://img.shields.io/badge/status-research-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-# DCF77 Meteotime Decoder
-
-![Python](https://img.shields.io/badge/Python-3.x-blue)
-![DCF77](https://img.shields.io/badge/Signal-DCF77-orange)
-![Meteotime](https://img.shields.io/badge/Data-Meteotime-blueviolet)
-![Reverse Engineering](https://img.shields.io/badge/type-reverse--engineering-red)
-![Status](https://img.shields.io/badge/status-research-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
-
 ---
 
 ## 📡 Overview
