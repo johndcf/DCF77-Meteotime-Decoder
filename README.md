@@ -46,7 +46,7 @@ From raw RF signal to **human-readable weather data**
 ### Requirements
 
 * Python 3.8 or newer
-* No external libraries required
+* No external libraries required (standard library only)
 
 ---
 
