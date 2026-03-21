@@ -179,4 +179,6 @@ Any use of this project is at your own responsibility.
 
 ## 🔄 Decoding Pipeline
 
-![Decoding Pipeline](decode_pipeline.png)
+<p align="center">
+  <img src="./decode_pipeline.png" width="700">
+</p>
