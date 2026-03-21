@@ -7,6 +7,15 @@
 ![Status](https://img.shields.io/badge/status-research-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+# DCF77 Meteotime Decoder
+
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![DCF77](https://img.shields.io/badge/Signal-DCF77-orange)
+![Meteotime](https://img.shields.io/badge/Data-Meteotime-blueviolet)
+![Reverse Engineering](https://img.shields.io/badge/type-reverse--engineering-red)
+![Status](https://img.shields.io/badge/status-research-green)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 ---
 
 ## 📡 Overview
@@ -15,10 +24,10 @@ This project demonstrates how to decode **Meteotime weather data** transmitted v
 
 It reconstructs the full decoding chain:
 
-* Bitstream acquisition
-* 3-minute frame assembly
+* Bitstream interpretation
+* 3-minute frame reconstruction
 * Decryption and validation
-* Weather data extraction and interpretation
+* Weather data extraction and mapping
 
 👉 Result:
 From raw RF signal to **human-readable weather data**
@@ -41,15 +50,71 @@ From raw RF signal to **human-readable weather data**
 
 ---
 
+## ▶️ Usage
+
+### Requirements
+
+* Python 3.8 or newer
+* No external libraries required
+
+---
+
+### Included Test Data
+
+The repository contains one sample log file:
+
+* `DcfLog.txt`
+
+---
+
+### Run the Decoder
+
+Basic usage:
+
+```bash
+python meteotime_weather_mapped_with_region.py DcfLog.txt
+```
+
+---
+
+### Optional Parameters
+
+Show more decoded records:
+
+```bash
+python meteotime_weather_mapped_with_region.py DcfLog.txt -n 25
+```
+
+Enable verbose output (cipher, key, plain data):
+
+```bash
+python meteotime_weather_mapped_with_region.py DcfLog.txt -v
+```
+
+Export decoded data to CSV:
+
+```bash
+python meteotime_weather_mapped_with_region.py DcfLog.txt --csv output.csv
+```
+
+Combine options:
+
+```bash
+python meteotime_weather_mapped_with_region.py DcfLog.txt -n 10 -v --csv output.csv
+```
+
+---
+
 ## ⚙️ How It Works
 
-1. Decode DCF77 bitstream (pulse length → bits)
-2. Assemble 3-minute Meteotime frames
-3. Build 82-bit data buffer
-4. Extract cipher and key
-5. Decrypt payload
-6. Validate result (0x2501)
-7. Interpret weather data
+1. Parse DCF77 log lines
+2. Extract weather bits and time fields
+3. Assemble **3-minute Meteotime frames**
+4. Build 82-bit buffer (weather + time)
+5. Derive key from time data
+6. Decrypt payload
+7. Validate using **0x2501**
+8. Map result to weather data
 
 ---
 
@@ -79,11 +144,12 @@ Meteotime data is transmitted in **3-minute frames**:
 ## 📊 Example Output
 
 ```text
-Valid frame detected
-Temperature: 12°C
-Condition: Rain
-Wind: Moderate
-Region: Central Europe
+18.03.26 00:02:00 -> 0x......
+  Region:   Central Europe
+  Section:  Day 1
+  Day:      Rain
+  Night:    Cloudy
+  Temp:     12 °C
 ```
 
 ---
@@ -94,7 +160,7 @@ Meteotime has long been considered difficult to decode due to:
 
 * Missing official documentation
 * Encrypted data format
-* Complex framing
+* Non-trivial framing structure
 
 This project shows that with:
 
@@ -116,9 +182,4 @@ It demonstrates the decoding of publicly received DCF77 signals.
 The author is not affiliated with, endorsed by, or connected to Meteotime or any related services.
 
 Any use of this project is at your own responsibility.
-
-This project must not be used for commercial purposes.
-
----
-
 
