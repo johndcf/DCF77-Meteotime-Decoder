@@ -7,6 +7,7 @@
 ![Status](https://img.shields.io/badge/status-research-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+Decoding encrypted Meteotime weather data from the DCF77 signal — from raw bits to forecast.
 ---
 
 ## 📡 Overview
