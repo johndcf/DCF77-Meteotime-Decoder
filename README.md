@@ -1,3 +1,8 @@
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![DCF77](https://img.shields.io/badge/Signal-DCF77-orange)
+![Meteotime](https://img.shields.io/badge/Data-Meteotime-blueviolet)
+![Status](https://img.shields.io/badge/status-research-green)
+![License](https://img.shields.io/badge/license-MIT-blue)
 # dcf77-meteotime-decoder
 Decoding DCF77 Meteotime weather data (reverse engineering project)
 DCF77 Meteotime Decoder
