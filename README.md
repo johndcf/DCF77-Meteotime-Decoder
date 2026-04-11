@@ -182,3 +182,42 @@ Any use of this project is at your own responsibility.
 <p align="center">
   <img src="./decode_pipeline.png" width="700">
 </p>
+
+## ⚠️ Known Limitations
+
+While the decoder is stable and produces consistent results, some limitations remain due to the lack of 
+official Meteotime specifications:
+
+### 🔬 Bit-Level vs. Semantic Accuracy
+The bit-level decoding pipeline (bit extraction, nibble swapping, permutation, key derivation, decryption, and 0x2501 validation) 
+is considered reliable and verified.
+The payload structure (82-bit frame, 3-minute reconstruction) is also consistent and matches observed broadcasts.
+
+### 🌡️ Temperature Field Ambiguity
+Certain temperature fields — especially in section-dependent payloads (e.g. section 7, bits 16–21) — 
+do not match the interpretation suggested by public documentation.
+Empirical observations show:
+These fields often correspond to daytime temperatures, not nighttime lows.
+Values are plausible and consistent across regions, but semantics differ from published descriptions.
+
+### 👉 As a result:
+
+Temperature decoding is numerically correct.
+But the exact meaning (day vs. night vs. redundant field) is partially inferred.
+
+### 🔁 Redundant or Reused Fields
+Some payload values appear duplicated across sections.
+It is unclear whether this is:
+- intentional redundancy
+- or different semantic roles using identical encoding
+
+### 🧪 Empirical Interpretation
+
+This implementation therefore follows a hybrid approach:
+
+- Deterministic decoding → for all cryptographic and structural steps
+- Empirical mapping → for selected payload fields
+
+### 📌 Summary
+
+The decoder is bitwise accurate, but parts of the semantic interpretation are empirically derived due to missing official specifications.
