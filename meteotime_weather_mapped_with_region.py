@@ -1,6 +1,46 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# ------------------------------------------------------------
+# Meteotime Decoder (DCF77)
+# ------------------------------------------------------------
+# This implementation decodes Meteotime weather data from DCF77.
+#
+# IMPORTANT IMPLEMENTATION NOTE:
+# The decoded payload bits are NOT directly aligned with the
+# official Meteotime PDF bit order.
+#
+# After decryption and byte assembly, the bit order within fields
+# appears to be reversed (LSB/MSB mismatch).
+#
+# Therefore:
+# - Weather codes (day/night) are bit-reversed (swab_nibble)
+# - Bits 8..11 are bit-reversed as one 4-bit field
+#   * if Bit 15 == 0: interpreted as extreme weather code
+#   * if Bit 15 == 1: interpreted as relative morning weather (bits 8..9)
+#                     and sunshine duration (bits 10..11)
+# - Rain probability field is bit-reversed
+# - Temperature (6-bit) is reconstructed bit-by-bit (LSB-first)
+#
+# This behavior was verified empirically:
+# - Summer (05 Aug): only reversed interpretation is plausible
+# - Winter (24 Dec): reversed interpretation also matches
+#
+# Conclusion:
+# The "mirrored" seems to be REQUIRED for correct results.
+# But there is no final prove for that interpretation of the payload,
+# it is best current payload interpretation.
+#
+# Decrypt / payload build: correct  
+# Day/Night: very likely correct  
+# Temperature: very likely correct  
+# Extreme/Wind: likely correct  
+# Rain: probably correct, but the weakest part from a formal standpoint
+# ------------------------------------------------------------
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import argparse
 import csv
 import re
@@ -50,8 +90,14 @@ WEATHER_CODES_DAY = {
     11: "Wärmegewitter", 12: "Schneeregenschauer", 13: "Schneeschauer",
     14: "Schneeregen", 15: "Schneefall",
 }
-WEATHER_CODES_NIGHT = dict(WEATHER_CODES_DAY)
-WEATHER_CODES_NIGHT[1] = "Klar / sonnig"
+
+WEATHER_CODES_NIGHT = {
+    0: "--", 1: "Klar", 2: "Leicht bewölkt", 3: "Vorwiegend bewölkt",
+    4: "Bedeckt", 5: "Hochnebel", 6: "Nebel", 7: "Regenschauer",
+    8: "Leichter Regen", 9: "Starker Regen", 10: "Frontengewitter",
+    11: "Wärmegewitter", 12: "Schneeregenschauer", 13: "Schneeschauer",
+    14: "Schneeregen", 15: "Schneefall",
+}
 
 EXTREME_CODES = {
     0: "Kein", 1: "Schweres Wetter 24 Std.", 2: "Schweres Wetter Tag",
@@ -61,10 +107,163 @@ EXTREME_CODES = {
     11: "Eisregen Nacht", 12: "Feinstaub", 13: "Ozon",
     14: "Radiation", 15: "Hochwasser",
 }
-WIND_DIR = {0: "N", 1: "NO", 2: "O", 3: "SO", 4: "S", 5: "SW", 6: "W", 7: "NW"}
-WIND_FORCE = {0: "?", 1: "0-2", 2: "3-4", 3: "5-6", 4: "7", 5: "8", 6: "9", 7: ">9"}
 
-REGIONS_0_59 = {
+ANOMALY_JUMP_CODES = {
+    0: "gleiches Wetter",
+    1: "Sprung 1",
+    2: "Sprung 2",
+    3: "Sprung 3",
+}
+
+SUNSHINE_DURATION_CODES = {
+    0: "0 - 2 Std.",
+    1: "2 - 4 Std.",
+    2: "5 - 6 Std.",
+    3: "7 - 8 Std.",
+}
+WIND_DIRECTION_CODES = {
+    0: "reserviert",
+    1: "reserviert",
+    2: "reserviert",
+    3: "reserviert",
+    4: "reserviert",
+    5: "reserviert",
+    6: "reserviert",
+    7: "reserviert",
+    8: "reserviert",
+    9: "reserviert",
+    10: "reserviert",
+    11: "reserviert",
+    12: "reserviert",
+    13: "reserviert",
+    14: "reserviert",
+    15: "reserviert",
+    16: "N",
+    17: "NO",
+    18: "O",
+    19: "SO",
+    20: "S",
+    21: "SW",
+    22: "W",
+    23: "NW",
+    24: "wechselnd",
+    25: "Fön",
+    26: "Biese NO",
+    27: "Mistral N",
+    28: "Scirocco S",
+    29: "Tramont. W",
+    30: "reserviert",
+    31: "reserviert",
+    32: "N",
+    33: "NO",
+    34: "O",
+    35: "SO",
+    36: "S",
+    37: "SW",
+    38: "W",
+    39: "NW",
+    40: "wechselnd",
+    41: "Fön",
+    42: "Biese NO",
+    43: "Mistral N",
+    44: "Scirocco S",
+    45: "Tramont. W",
+    46: "reserviert",
+    47: "reserviert",
+    48: "N",
+    49: "NO",
+    50: "O",
+    51: "SO",
+    52: "S",
+    53: "SW",
+    54: "W",
+    55: "NW",
+    56: "wechselnd",
+    57: "Fön",
+    58: "Biese NO",
+    59: "Mistral N",
+    60: "Scirocco S",
+    61: "Tramont. W",
+    62: "reserviert",
+    63: "reserviert",
+    64: "N",
+    65: "NO",
+    66: "O",
+    67: "SO",
+    68: "S",
+    69: "SW",
+    70: "W",
+    71: "NW",
+    72: "wechselnd",
+    73: "Fön",
+    74: "Biese NO",
+    75: "Mistral N",
+    76: "Scirocco S",
+    77: "Tramont. W",
+    78: "reserviert",
+    79: "reserviert",
+    80: "N",
+    81: "NO",
+    82: "O",
+    83: "SO",
+    84: "S",
+    85: "SW",
+    86: "W",
+    87: "NW",
+    88: "wechselnd",
+    89: "Fön",
+    90: "Biese NO",
+    91: "Mistral N",
+    92: "Scirocco S",
+    93: "Tramont. W",
+    94: "reserviert",
+    95: "reserviert",
+    96: "N",
+    97: "NO",
+    98: "O",
+    99: "SO",
+    100: "S",
+    101: "SW",
+    102: "W",
+    103: "NW",
+    104: "wechselnd",
+    105: "Fön",
+    106: "Biese NO",
+    107: "Mistral N",
+    108: "Scirocco S",
+    109: "Tramont. W",
+    110: "reserviert",
+    111: "reserviert",
+    112: "N",
+    113: "NO",
+    114: "O",
+    115: "SO",
+    116: "S",
+    117: "SW",
+    118: "W",
+    119: "NW",
+    120: "wechselnd",
+    121: "Fön",
+    122: "Biese NO",
+    123: "Mistral N",
+    124: "Scirocco S",
+    125: "Tramont. W",
+    126: "reserviert",
+    127: "reserviert",
+}
+
+WIND_FORCE = {
+    0: "0",
+    1: "0-2",
+    2: "3-4",
+    3: "5-6",
+    4: "7",
+    5: "8",
+    6: "9",
+    7: ">=10",
+}
+
+REGIONS_ALL = {
     0: "Bordeaux", 1: "La Rochelle", 2: "Paris", 3: "Brest", 4: "Clermont-Ferrand",
     5: "Béziers", 6: "Bruxelles", 7: "Dijon", 8: "Marseille", 9: "Lyon",
     10: "Grenoble", 11: "La Chaux-de-Fonds", 12: "Frankfurt am Main", 13: "Westl. Mittelgebirge",
@@ -76,8 +275,13 @@ REGIONS_0_59 = {
     39: "Sestriere", 40: "Milano", 41: "Roma", 42: "Amsterdam", 43: "Génova",
     44: "Venezia", 45: "Strasbourg", 46: "Klagenfurt", 47: "Innsbruck", 48: "Salzburg",
     49: "Bratislava", 50: "Praha", 51: "Decin", 52: "Berlin", 53: "Göteborg",
-    54: "Stockholm", 55: "Kalmar", 56: "Jönköping", 57: "Donaueschingen", 58: "Oslo",
     59: "Stuttgart",
+    60: "Napoli", 61: "Ancona", 62: "Bari", 63: "Budapest", 64: "Madrid",
+    65: "Bilbao", 66: "Palermo", 67: "Palma de Mallorca", 68: "Valencia", 69: "Barcelona",
+    70: "Andorra", 71: "Sevilla", 72: "Lissabon", 73: "Sassari", 74: "Gijon",
+    75: "Galway", 76: "Dublin", 77: "Glasgow", 78: "Stavanger", 79: "Trondheim",
+    80: "Sundsvall", 81: "Gdansk", 82: "Warszawa", 83: "Krakow", 84: "Umea",
+    85: "Oestersund", 86: "Samedan", 87: "Zagreb", 88: "Zermatt", 89: "Split",
 }
 
 SECTION_INFO = {
@@ -90,6 +294,12 @@ SECTION_INFO = {
     6: ("Tag 3", "Hoch", "Extrem/Regen"),
     7: ("Tag 3", "Wind/Anomalie", "Wind"),
 }
+
+
+def get_region_meta(region_id: int):
+    name = REGIONS_ALL.get(region_id, f'Region {region_id}')
+    forecast_days = 4 if region_id <= 59 else 2
+    return name, forecast_days
 
 @dataclass
 class Row:
@@ -313,20 +523,44 @@ def decode_weather_info(payload: int):
     day_code = swab_nibble(info[0] >> 4)
     night_code = swab_nibble(info[0] & 0x0F)
     anomaly = info[1] & 0x01
-    extreme_code = swab_nibble(info[1] >> 4)
-    rain_group = swab_nibble(info[1] & 0x0E)
+
+    # Bits 8..11 are one mirrored 4-bit field.
+    # If anomaly_bit == 0: extreme weather code
+    # If anomaly_bit == 1: bits 8..9 = relative morning weather, bits 10..11 = sunshine duration
+    bits8_11 = swab_nibble(info[1] >> 4)
+    extreme_code = bits8_11
+    morning_jump_code = bits8_11 & 0x03
+    sunshine_code = (bits8_11 >> 2) & 0x03
+
+    # Rain probability is a 3-bit field in bits 1..3 of info[1].
+    # Extract the field cleanly first, then reverse the 3-bit order.
+    rain_raw = (info[1] >> 1) & 0x07
+    rain_group = ((rain_raw & 0x01) << 2) | (rain_raw & 0x02) | ((rain_raw & 0x04) >> 2)
     rain_percent = min(rain_group * 15, 100)
+
     temp_raw = info[2] >> 2
     temp_code = 0
     for _ in range(6):
         temp_code = (temp_code << 1) | (temp_raw & 0x01)
         temp_raw >>= 1
+
     if temp_code == 0:
         temp_text = '< -21 °C'
     elif temp_code == 63:
         temp_text = '> 40 °C'
     else:
         temp_text = f'{temp_code - 22} °C'
+
+    if anomaly == 0:
+        bits8_11_mode = 'extreme_weather'
+        bits8_11_text = EXTREME_CODES.get(extreme_code, f'Code {extreme_code}')
+    else:
+        bits8_11_mode = 'weather_anomaly'
+        bits8_11_text = (
+            f"Relatives Vormittagswetter = {ANOMALY_JUMP_CODES.get(morning_jump_code, f'Code {morning_jump_code}')}, "
+            f"Sonnenscheindauer = {SUNSHINE_DURATION_CODES.get(sunshine_code, f'Code {sunshine_code}')}"
+        )
+
     return {
         'payload_hex': f'0x{payload:06X}',
         'info0_hex': f'{info[0]:02X}',
@@ -337,13 +571,21 @@ def decode_weather_info(payload: int):
         'night_code': night_code,
         'night_weather': WEATHER_CODES_NIGHT.get(night_code, f'Code {night_code}'),
         'anomaly_bit': anomaly,
+        'bits8_11_mode': bits8_11_mode,
+        'bits8_11_raw_code': bits8_11,
+        'bits8_11_text': bits8_11_text,
         'extreme_code': extreme_code,
         'extreme_text': EXTREME_CODES.get(extreme_code, f'Code {extreme_code}'),
+        'morning_jump_code': morning_jump_code,
+        'morning_jump_text': ANOMALY_JUMP_CODES.get(morning_jump_code, f'Code {morning_jump_code}'),
+        'sunshine_code': sunshine_code,
+        'sunshine_text': SUNSHINE_DURATION_CODES.get(sunshine_code, f'Code {sunshine_code}'),
         'rain_group': rain_group,
         'rain_percent': rain_percent,
         'wind_dir_code': extreme_code,
-        'wind_direction': WIND_DIR.get(extreme_code, f'Code {extreme_code}'),
         'wind_force_code': rain_group,
+        'wind_full_code': (rain_group << 4) | extreme_code,
+        'wind_direction': WIND_DIRECTION_CODES.get((rain_group << 4) | extreme_code, f'Code {(rain_group << 4) | extreme_code}'),
         'wind_force': WIND_FORCE.get(rain_group, f'Code {rain_group}'),
         'temp_code': temp_code,
         'temp_text': temp_text,
@@ -392,6 +634,9 @@ def get_minutes_since_2200_utc_anchor(row: Row) -> int:
 
 def get_area_section(row: Row):
     minutes = get_minutes_since_2200_utc_anchor(row)
+   # The current time-slot model still decodes the original 60 fixed 3-minute slots.
+   # The additional regions 60..89 from the PDF are defined in the region table,
+   # but require a separate transmitter/slot mapping for automatic assignment.
     area = (minutes % (60 * 3)) // 3
     area -= 1
     if area < 0:
@@ -403,18 +648,34 @@ def get_area_section(row: Row):
 def add_region_section(mapped: dict, row: Row):
     area, section = get_area_section(row)
     day_label, section_kind, interpretation = SECTION_INFO.get(section, (f'Sektion {section}', '?', '?'))
+    region_name, forecast_days = get_region_meta(area)
     mapped['region_id'] = area
-    mapped['region_name'] = REGIONS_0_59.get(area, f'Region {area}')
+    mapped['region_name'] = region_name
+    mapped['forecast_days'] = forecast_days
     mapped['section_id'] = section
     mapped['day_label'] = day_label
     mapped['section_kind'] = section_kind
     mapped['interpretation'] = interpretation
     mapped['is_high_section'] = section in (0, 2, 4, 6)
     mapped['is_low_wind_section'] = section in (1, 3, 5, 7)
+
     if mapped['is_high_section']:
-        mapped['section_value_text'] = f"Extrem = {mapped['extreme_text']}, Regen = {mapped['rain_percent']} %"
+        if mapped['anomaly_bit'] == 0:
+            mapped['section_value_text'] = (
+                f"Extrem = {mapped['extreme_text']} (Code {mapped['extreme_code']}), "
+                f"Regen = {mapped['rain_percent']} %"
+            )
+        else:
+            mapped['section_value_text'] = (
+                f"Relatives Vormittagswetter = {mapped['morning_jump_text']} (Code {mapped['morning_jump_code']}), "
+                f"Sonnenscheindauer = {mapped['sunshine_text']} (Code {mapped['sunshine_code']}), "
+                f"Regen = {mapped['rain_percent']} %"
+            )
     else:
-        mapped['section_value_text'] = f"Wind = {mapped['wind_direction']}, Stärke = {mapped['wind_force']}"
+        mapped['section_value_text'] = (
+            f"Wind = {mapped['wind_direction']} (Code {mapped['wind_dir_code']}), "
+            f"Stärke = {mapped['wind_force']} (Code {mapped['wind_force_code']})"
+        )
     return mapped
 
 
@@ -488,16 +749,14 @@ def print_decoded(decoded, show_internal=False):
     for r, payload, cipher, key, plain, mapped in decoded:
         ts = f'{r.dd:02d}.{r.mo:02d}.{r.yy:02d} {r.hh:02d}:{r.mm:02d}:{r.ss:02d}'
         print(f'{ts} -> {mapped["payload_hex"]}')
-        print(f'  Region:   {mapped["region_id"]} - {mapped["region_name"]}')
+        print(f'  Region:   {mapped["region_id"]} - {mapped["region_name"]} ({mapped["forecast_days"]}-Tagesprognose)')
         print(f'  Sektion:  {mapped["section_id"]} - {mapped["day_label"]} / {mapped["section_kind"]}')
         print(f'  Tag:      {mapped["day_weather"]} (Code {mapped["day_code"]})')
         print(f'  Nacht:    {mapped["night_weather"]} (Code {mapped["night_code"]})')
         print(f'  Temp:     {mapped["temp_text"]} (Code {mapped["temp_code"]})')
         print(f'  Anom.:    {mapped["anomaly_bit"]}')
-        if mapped['is_high_section']:
-            print(f'  Deutung:  Extrem = {mapped["extreme_text"]} (Code {mapped["extreme_code"]}), Regen = {mapped["rain_percent"]} %')
-        else:
-            print(f'  Deutung:  Wind = {mapped["wind_direction"]} (Code {mapped["wind_dir_code"]}), Stärke = {mapped["wind_force"]} (Code {mapped["wind_force_code"]})')
+        print(f'  Wind:     {mapped["wind_direction"]}, Stärke {mapped["wind_force"]} (Code {mapped["wind_full_code"]}, dir={mapped["wind_dir_code"]}, force={mapped["wind_force_code"]})')
+        print(f'  Deutung:  {mapped["section_value_text"]}')
         if show_internal:
             print('  cipher:   ' + ' '.join(f'{x:02X}' for x in cipher))
             print('  key:      ' + ' '.join(f'{x:02X}' for x in key))
@@ -509,21 +768,29 @@ def write_csv(path: str, decoded):
     with open(path, 'w', newline='', encoding='utf-8') as f:
         w = csv.writer(f, delimiter=';')
         w.writerow([
-            'date', 'time', 'region_id', 'region_name', 'section_id', 'day_label', 'section_kind',
+            'date', 'time', 'region_id', 'region_name', 'forecast_days', 'section_id', 'day_label', 'section_kind',
             'payload_hex', 'info0', 'info1', 'info2',
             'day_code', 'day_weather', 'night_code', 'night_weather',
-            'anomaly_bit', 'extreme_code', 'extreme_text', 'rain_group', 'rain_percent',
-            'wind_dir_code', 'wind_direction', 'wind_force_code', 'wind_force',
+            'anomaly_bit', 'bits8_11_mode', 'bits8_11_raw_code',
+            'extreme_code', 'extreme_text',
+            'morning_jump_code', 'morning_jump_text',
+            'sunshine_code', 'sunshine_text',
+            'rain_group', 'rain_percent',
+            'wind_full_code', 'wind_dir_code', 'wind_direction', 'wind_force_code', 'wind_force',
             'temp_code', 'temp_text', 'plain'
         ])
         for r, payload, cipher, key, plain, mapped in decoded:
             w.writerow([
                 f'{r.dd:02d}.{r.mo:02d}.{r.yy:02d}', f'{r.hh:02d}:{r.mm:02d}:{r.ss:02d}',
-                mapped['region_id'], mapped['region_name'], mapped['section_id'], mapped['day_label'], mapped['section_kind'],
+                mapped['region_id'], mapped['region_name'], mapped['forecast_days'], mapped['section_id'], mapped['day_label'], mapped['section_kind'],
                 mapped['payload_hex'], mapped['info0_hex'], mapped['info1_hex'], mapped['info2_hex'],
                 mapped['day_code'], mapped['day_weather'], mapped['night_code'], mapped['night_weather'],
-                mapped['anomaly_bit'], mapped['extreme_code'], mapped['extreme_text'], mapped['rain_group'], mapped['rain_percent'],
-                mapped['wind_dir_code'], mapped['wind_direction'], mapped['wind_force_code'], mapped['wind_force'],
+                mapped['anomaly_bit'], mapped['bits8_11_mode'], mapped['bits8_11_raw_code'],
+                mapped['extreme_code'], mapped['extreme_text'],
+                mapped['morning_jump_code'], mapped['morning_jump_text'],
+                mapped['sunshine_code'], mapped['sunshine_text'],
+                mapped['rain_group'], mapped['rain_percent'],
+                mapped['wind_full_code'], mapped['wind_dir_code'], mapped['wind_direction'], mapped['wind_force_code'], mapped['wind_force'],
                 mapped['temp_code'], mapped['temp_text'], ' '.join(f'{x:02X}' for x in plain)
             ])
 
