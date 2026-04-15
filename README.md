@@ -183,6 +183,8 @@ Any use of this project is at your own responsibility.
   <img src="./decode_pipeline.png" width="700">
 </p>
 
+---
+
 ## ⚠️ Known Limitations
 
 While the decoder is stable and produces consistent results, some limitations remain due to the lack of 
@@ -193,17 +195,9 @@ The bit-level decoding pipeline (bit extraction, nibble swapping, permutation, k
 is considered reliable and verified.
 The payload structure (82-bit frame, 3-minute reconstruction) is also consistent and matches observed broadcasts.
 
-### 🌡️ Temperature Field Ambiguity
-Certain temperature fields — especially in section-dependent payloads (e.g. section 7, bits 16–21) — 
-do not match the interpretation suggested by public documentation.
-Empirical observations show:
-These fields often correspond to daytime temperatures, not nighttime lows.
-Values are plausible and consistent across regions, but semantics differ from published descriptions.
-
-### 👉 As a result:
-
-Temperature decoding is numerically correct.
-But the exact meaning (day vs. night vs. redundant field) is partially inferred.
+🌩️ Weather Code Ambiguity
+Weather-symbol decoding is mostly stable, but a small number of edge cases remain unresolved.
+Some decoded weather codes appear inconsistent with the associated temperature or expected regional conditions.
 
 ### 🔁 Redundant or Reused Fields
 Some payload values appear duplicated across sections.
