@@ -195,7 +195,7 @@ The bit-level decoding pipeline (bit extraction, nibble swapping, permutation, k
 is considered reliable and verified.
 The payload structure (82-bit frame, 3-minute reconstruction) is also consistent and matches observed broadcasts.
 
-🌩️ Weather Code Ambiguity
+### 🌩️ Weather Code Ambiguity
 Weather-symbol decoding is mostly stable, but a small number of edge cases remain unresolved.
 Some decoded weather codes appear inconsistent with the associated temperature or expected regional conditions.
 
