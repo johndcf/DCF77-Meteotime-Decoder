@@ -31,11 +31,22 @@
 # But there is no final prove for that interpretation of the payload,
 # it is best current payload interpretation.
 #
-# Decrypt / payload build: correct  
-# Day/Night: very likely correct  
-# Temperature: very likely correct  
-# Extreme/Wind: likely correct  
+# Decrypt / payload build: correct
+# Day/Night: very likely correct
+# Temperature: very likely correct
+# Extreme/Wind: likely correct
 # Rain: probably correct, but the weakest part from a formal standpoint
+#
+# SEMANTIC MODEL NOTE:
+# The section labels "Hoch" / "Tief" are kept internally for compatibility
+# with older reasoning, but the output interpretation is now modeled as:
+# - TAG-BLOCK:   12 h day weather + 12 h day temperature
+#                plus 24 h heavy-weather / rain information
+# - NACHT-BLOCK: 12 h night weather + 12 h night temperature
+#                plus 24 h wind information
+#
+# In other words, the two sections are treated as two complementary views
+# of one forecast day, not as two unrelated forecasts.
 # ------------------------------------------------------------
 
 #!/usr/bin/env python3
@@ -47,6 +58,8 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from typing import List, Optional
+
+ENABLE_SECTION7_OVERRIDE = False
 
 LINE_RE = re.compile(
     r'^\s*([01])\s+([01]{14})\s+([01]{6})\s+([01]{8})\s+([01]{7})\s+([01]{6})\s+([01]{3})\s+([01]{5})\s+([01]{9}).*?(\d{2})\.(\d{2})\.(\d{2})\s+(\d{2}):(\d{2}):(\d{2})'
@@ -100,9 +113,9 @@ WEATHER_CODES_NIGHT = {
 }
 
 EXTREME_CODES = {
-    0: "Kein", 1: "Schweres Wetter 24 Std.", 2: "Schweres Wetter Tag",
-    3: "Schweres Wetter Nacht", 4: "Sturm", 5: "Sturm Tag",
-    6: "Sturm Nacht", 7: "Böen Tag", 8: "Böen Nacht",
+    0: "Kein", 1: "Schweres Wetter 24 Std.", 2: "Schweres Wetter (Tag)",
+    3: "Schweres Wetter (Nacht)", 4: "Sturm", 5: "Sturm (Tag)",
+    6: "Sturm (Nacht)", 7: "Böen (Tag)", 8: "Böen (Nacht)",
     9: "Eisregen Vormittag", 10: "Eisregen Nachmittag",
     11: "Eisregen Nacht", 12: "Feinstaub", 13: "Ozon",
     14: "Radiation", 15: "Hochwasser",
@@ -148,7 +161,7 @@ WIND_DIRECTION_CODES = {
     23: "NW",
     24: "wechselnd",
     25: "Fön",
-    26: "Biese NO",
+    26: "Bise NO",
     27: "Mistral N",
     28: "Scirocco S",
     29: "Tramont. W",
@@ -164,7 +177,7 @@ WIND_DIRECTION_CODES = {
     39: "NW",
     40: "wechselnd",
     41: "Fön",
-    42: "Biese NO",
+    42: "Bise NO",
     43: "Mistral N",
     44: "Scirocco S",
     45: "Tramont. W",
@@ -180,7 +193,7 @@ WIND_DIRECTION_CODES = {
     55: "NW",
     56: "wechselnd",
     57: "Fön",
-    58: "Biese NO",
+    58: "Bise NO",
     59: "Mistral N",
     60: "Scirocco S",
     61: "Tramont. W",
@@ -196,7 +209,7 @@ WIND_DIRECTION_CODES = {
     71: "NW",
     72: "wechselnd",
     73: "Fön",
-    74: "Biese NO",
+    74: "Bise NO",
     75: "Mistral N",
     76: "Scirocco S",
     77: "Tramont. W",
@@ -212,7 +225,7 @@ WIND_DIRECTION_CODES = {
     87: "NW",
     88: "wechselnd",
     89: "Fön",
-    90: "Biese NO",
+    90: "Bise NO",
     91: "Mistral N",
     92: "Scirocco S",
     93: "Tramont. W",
@@ -228,7 +241,7 @@ WIND_DIRECTION_CODES = {
     103: "NW",
     104: "wechselnd",
     105: "Fön",
-    106: "Biese NO",
+    106: "Bise NO",
     107: "Mistral N",
     108: "Scirocco S",
     109: "Tramont. W",
@@ -244,7 +257,7 @@ WIND_DIRECTION_CODES = {
     119: "NW",
     120: "wechselnd",
     121: "Fön",
-    122: "Biese NO",
+    122: "Bise NO",
     123: "Mistral N",
     124: "Scirocco S",
     125: "Tramont. W",
@@ -264,18 +277,66 @@ WIND_FORCE = {
 }
 
 REGIONS_ALL = {
-    0: "Bordeaux", 1: "La Rochelle", 2: "Paris", 3: "Brest", 4: "Clermont-Ferrand",
-    5: "Béziers", 6: "Bruxelles", 7: "Dijon", 8: "Marseille", 9: "Lyon",
-    10: "Grenoble", 11: "La Chaux-de-Fonds", 12: "Frankfurt am Main", 13: "Westl. Mittelgebirge",
-    14: "Duisburg", 15: "Swansea", 16: "Manchester", 17: "Le Havre", 18: "London",
-    19: "Bremerhaven", 20: "Herning", 21: "Århus", 22: "Hannover", 23: "København",
-    24: "Rostock", 25: "Ingolstadt", 26: "München", 27: "Bolzano", 28: "Nürnberg",
-    29: "Leipzig", 30: "Erfurt", 31: "Lausanne", 32: "Zürich", 33: "Adelboden",
-    34: "Sion", 35: "Glarus", 36: "Davos", 37: "Kassel", 38: "Locarno",
-    39: "Sestriere", 40: "Milano", 41: "Roma", 42: "Amsterdam", 43: "Génova",
-    44: "Venezia", 45: "Strasbourg", 46: "Klagenfurt", 47: "Innsbruck", 48: "Salzburg",
-    49: "Bratislava", 50: "Praha", 51: "Decin", 52: "Berlin", 53: "Göteborg",
-    59: "Stuttgart",
+    0: "Bordeaux / Südwestfrankreich",
+    1: "La Rochelle / Westküste Frankreich",
+    2: "Paris / Pariser Becken",
+    3: "Brest / Bretagne",
+    4: "Clermont-Ferrand / Zentralmassif",
+    5: "Béziers / Languedoc-Roussillon",
+    6: "Bruxelles / Benelux",
+    7: "Dijon / Ostfrankreich (Burgund)",
+    8: "Marseille / Südfrankreich",
+    9: "Lyon / Rhonetal",
+    10: "Grenoble / Französische Alpen",
+    11: "La Chaux-de-Fonds / Jura",
+    12: "Frankfurt am Main / Unterer Rheingraben",
+    13: "Westl. Mittelgebirge / Westliches Mittelgebirge",
+    14: "Duisburg / Nordrhein-Westfalen",
+    15: "Swansea / Westl. England & Wales",
+    16: "Manchester / Nördliches England",
+    17: "Le Havre / Normandie",
+    18: "London / Südostengland",
+    19: "Bremerhaven / Nordseeküste",
+    20: "Herning / Nordwestliches Jütland",
+    21: "Århus / Östliches Jütland",
+    22: "Hannover / Norddeutschland",
+    23: "København / Seeland",
+    24: "Rostock / Ostseeküste",
+    25: "Ingolstadt / Donautal",
+    26: "München / Südbayern",
+    27: "Bolzano / Südtirol",
+    28: "Nürnberg / Nordbayern",
+    29: "Leipzig / Sachsen",
+    30: "Erfurt / Thüringen",
+    31: "Lausanne / Westliches Schweizer Mittelland",
+    32: "Zürich / Östliches Schweizer Mittelland",
+    33: "Adelboden / Westlicher Schweizer Alpennordhang",
+    34: "Sion / Wallis",
+    35: "Glarus / Östlicher Schweizer Alpennordhang",
+    36: "Davos / Graubünden",
+    37: "Kassel / Mittelgebirge Ost",
+    38: "Locarno / Tessin",
+    39: "Sestriere / Piemont Alpen",
+    40: "Milano / Poebene",
+    41: "Roma / Toskana",
+    42: "Amsterdam / Holland",
+    43: "Génova / Golf von Genua",
+    44: "Venezia / Pomündung",
+    45: "Strasbourg / Oberer Rheingraben",
+    46: "Klagenfurt / Österreichischer Alpensüdhang",
+    47: "Innsbruck / Inneralpine Gebiete Österreich",
+    48: "Salzburg / Alpennordhang Bayern/Österreich",
+    49: "Bratislava / Wien-Region (AT/SK)",
+    50: "Praha / Tschechisches Becken",
+    51: "Decin / Erzgebirge",
+    52: "Berlin / Ostdeutschland",
+    53: "Göteborg / Westküste Schweden",
+    54: "Stockholm / Stockholm-Region",
+    55: "Kalmar / Schwedische Ostseeküste",
+    56: "Jönköping / Südschweden",
+    57: "Donaueschingen / Schwarzwald & Schwäbische Alb",
+    58: "Oslo / Oslo-Region",
+    59: "Stuttgart / Nördliches Baden-Württemberg",
     60: "Napoli", 61: "Ancona", 62: "Bari", 63: "Budapest", 64: "Madrid",
     65: "Bilbao", 66: "Palermo", 67: "Palma de Mallorca", 68: "Valencia", 69: "Barcelona",
     70: "Andorra", 71: "Sevilla", 72: "Lissabon", 73: "Sassari", 74: "Gijon",
@@ -283,16 +344,15 @@ REGIONS_ALL = {
     80: "Sundsvall", 81: "Gdansk", 82: "Warszawa", 83: "Krakow", 84: "Umea",
     85: "Oestersund", 86: "Samedan", 87: "Zagreb", 88: "Zermatt", 89: "Split",
 }
-
 SECTION_INFO = {
-    0: ("Heute", "Hoch", "Extrem/Regen"),
-    1: ("Heute", "Tief", "Wind"),
-    2: ("Tag 1", "Hoch", "Extrem/Regen"),
-    3: ("Tag 1", "Tief", "Wind"),
-    4: ("Tag 2", "Hoch", "Extrem/Regen"),
-    5: ("Tag 2", "Tief", "Wind"),
-    6: ("Tag 3", "Hoch", "Extrem/Regen"),
-    7: ("Tag 3", "Wind/Anomalie", "Wind"),
+    0: ("Heute", "Tag-Block", "12h Tag + 24h Schweres Wetter/Regen"),
+    1: ("Heute", "Nacht-Block", "12h Nacht + 24h Wind"),
+    2: ("Tag 1", "Tag-Block", "12h Tag + 24h Schweres Wetter/Regen"),
+    3: ("Tag 1", "Nacht-Block", "12h Nacht + 24h Wind"),
+    4: ("Tag 2", "Tag-Block", "12h Tag + 24h Schweres Wetter/Regen"),
+    5: ("Tag 2", "Nacht-Block", "12h Nacht + 24h Wind"),
+    6: ("Tag 3", "Tag-Block", "12h Tag + 24h Schweres Wetter/Regen"),
+    7: ("ungenutzt", "ungenutzt", "ungenutzt"),
 }
 
 
@@ -587,6 +647,7 @@ def decode_weather_info(payload: int):
         'wind_full_code': (rain_group << 4) | extreme_code,
         'wind_direction': WIND_DIRECTION_CODES.get((rain_group << 4) | extreme_code, f'Code {(rain_group << 4) | extreme_code}'),
         'wind_force': WIND_FORCE.get(rain_group, f'Code {rain_group}'),
+        'wind_direction_valid_when_anomaly_bit_is_0': True,
         'temp_code': temp_code,
         'temp_text': temp_text,
     }
@@ -634,48 +695,125 @@ def get_minutes_since_2200_utc_anchor(row: Row) -> int:
 
 def get_area_section(row: Row):
     minutes = get_minutes_since_2200_utc_anchor(row)
-   # The current time-slot model still decodes the original 60 fixed 3-minute slots.
-   # The additional regions 60..89 from the PDF are defined in the region table,
-   # but require a separate transmitter/slot mapping for automatic assignment.
-    area = (minutes % (60 * 3)) // 3
-    area -= 1
-    if area < 0:
-        area += 60
-    section = minutes // (60 * 3)
-    return area, section
 
+    # Meteotime send schema in UTC:
+    # 22:00 - 03:59  regions 0..59  -> Heute   (sections 0/1, 6 min per region)
+    # 04:00 - 09:59  regions 0..59  -> Tag 1   (sections 2/3, 6 min per region)
+    # 10:00 - 15:59  regions 0..59  -> Tag 2   (sections 4/5, 6 min per region)
+    # 16:00 - 18:59  regions 0..59  -> Tag 3   (section 6 only, 3 min per region)
+    # 19:00 - 20:29  regions 60..89 -> Heute   (2-day model, HI only)
+    # 20:30 - 21:59  regions 60..89 -> Tag 1   (2-day model, HI only)
+
+    if 0 <= minutes <= 179:          # 22:00 - 00:59 UTC
+        area = minutes // 3
+        section = 0
+    elif 180 <= minutes <= 359:      # 01:00 - 03:59 UTC
+        area = (minutes - 180) // 3
+        section = 1
+    elif 360 <= minutes <= 539:      # 04:00 - 06:59 UTC
+        area = (minutes - 360) // 3
+        section = 2
+    elif 540 <= minutes <= 719:      # 07:00 - 09:59 UTC
+        area = (minutes - 540) // 3
+        section = 3
+    elif 720 <= minutes <= 899:      # 10:00 - 12:59 UTC
+        area = (minutes - 720) // 3
+        section = 4
+    elif 900 <= minutes <= 1079:     # 13:00 - 15:59 UTC
+        area = (minutes - 900) // 3
+        section = 5
+    elif 1080 <= minutes <= 1259:    # 16:00 - 18:59 UTC
+        area = (minutes - 1080) // 3
+        section = 6
+    elif 1260 <= minutes <= 1349:    # 19:00 - 20:29 UTC
+        area = 60 + ((minutes - 1260) // 3)
+        section = 0
+    else:                            # 20:30 - 21:59 UTC
+        area = 60 + ((minutes - 1350) // 3)
+        section = 1
+
+    return area, section
 
 def add_region_section(mapped: dict, row: Row):
     area, section = get_area_section(row)
-    day_label, section_kind, interpretation = SECTION_INFO.get(section, (f'Sektion {section}', '?', '?'))
     region_name, forecast_days = get_region_meta(area)
+
     mapped['region_id'] = area
     mapped['region_name'] = region_name
     mapped['forecast_days'] = forecast_days
     mapped['section_id'] = section
+
+    # Regions 60..89 use a reduced 2-day forecast model:
+    # one 90-minute block for today and one 90-minute block for the following day.
+    # Only day/night weather and one HI temperature are shown.
+    if area >= 60:
+        day_label = 'Heute' if section == 0 else 'Tag 1'
+        section_kind = '2-Tages-Prognose'
+        interpretation = 'nur Wetter Tag/Nacht + Temperatur (HI)'
+
+        mapped['day_label'] = day_label
+        mapped['section_kind'] = section_kind
+        mapped['interpretation'] = interpretation
+        mapped['is_high_section'] = False
+        mapped['is_low_wind_section'] = False
+        mapped['section7_high_override'] = False
+        mapped['display_day_weather'] = mapped['day_weather']
+        mapped['display_day_code'] = mapped['day_code']
+        mapped['display_night_weather'] = mapped['night_weather']
+        mapped['display_night_code'] = mapped['night_code']
+        mapped['section_value_text'] = '-'
+        mapped['temp_text'] = f"{mapped['temp_text']} (HI)"
+        return mapped
+
+    day_label, section_kind, interpretation = SECTION_INFO.get(section, (f'Sektion {section}', '?', '?'))
     mapped['day_label'] = day_label
     mapped['section_kind'] = section_kind
     mapped['interpretation'] = interpretation
     mapped['is_high_section'] = section in (0, 2, 4, 6)
     mapped['is_low_wind_section'] = section in (1, 3, 5, 7)
+    mapped['section7_high_override'] = (
+     ENABLE_SECTION7_OVERRIDE and section == 7 and mapped['anomaly_bit'] == 0
+)
 
-    if mapped['is_high_section']:
-        if mapped['anomaly_bit'] == 0:
-            mapped['section_value_text'] = (
-                f"Extrem = {mapped['extreme_text']} (Code {mapped['extreme_code']}), "
-                f"Regen = {mapped['rain_percent']} %"
-            )
-        else:
+    if mapped['is_high_section'] or mapped['section7_high_override']:
+        mapped['display_day_weather'] = mapped['day_weather']
+        mapped['display_day_code'] = mapped['day_code']
+        mapped['display_night_weather'] = mapped['night_weather']
+        mapped['display_night_code'] = mapped['night_code']
+
+        # The Bit-15 anomaly interpretation for "Tag" is only valid for
+        # section 0 (Heute / Hoch). For forecast days (sections 2/4/6),
+        # Bit 15 is treated as not applicable and the block is always
+        # interpreted as extreme weather + rain. This makes the decoder
+        # more robust against occasional bit errors in later high sections.
+        mapped['day_anomaly_mode_valid'] = (section == 0)
+
+        if mapped['anomaly_bit'] == 1 and mapped['day_anomaly_mode_valid']:
             mapped['section_value_text'] = (
                 f"Relatives Vormittagswetter = {mapped['morning_jump_text']} (Code {mapped['morning_jump_code']}), "
                 f"Sonnenscheindauer = {mapped['sunshine_text']} (Code {mapped['sunshine_code']}), "
                 f"Regen = {mapped['rain_percent']} %"
             )
+        else:
+            mapped['section_value_text'] = (
+                f"Schweres Wetter = {mapped['extreme_text']} (Code {mapped['extreme_code']}), "
+                f"Regen = {mapped['rain_percent']} %"
+            )
     else:
-        mapped['section_value_text'] = (
-            f"Wind = {mapped['wind_direction']} (Code {mapped['wind_dir_code']}), "
-            f"Stärke = {mapped['wind_force']} (Code {mapped['wind_force_code']})"
-        )
+        mapped['display_day_weather'] = mapped['day_weather']
+        mapped['display_day_code'] = mapped['day_code']
+        mapped['display_night_weather'] = mapped['night_weather']
+        mapped['display_night_code'] = mapped['night_code']
+
+        if mapped['anomaly_bit'] == 0:
+            mapped['section_value_text'] = (
+                f"Wind = {mapped['wind_direction']} (Code {mapped['wind_dir_code']}), "
+                f"Stärke = {mapped['wind_force']} (Code {mapped['wind_force_code']})"
+            )
+        else:
+            mapped['section_value_text'] = (
+                f"Schweres Wetter = {mapped['extreme_text']} (Code {mapped['extreme_code']})"
+            )
     return mapped
 
 
@@ -751,11 +889,21 @@ def print_decoded(decoded, show_internal=False):
         print(f'{ts} -> {mapped["payload_hex"]}')
         print(f'  Region:   {mapped["region_id"]} - {mapped["region_name"]} ({mapped["forecast_days"]}-Tagesprognose)')
         print(f'  Sektion:  {mapped["section_id"]} - {mapped["day_label"]} / {mapped["section_kind"]}')
-        print(f'  Tag:      {mapped["day_weather"]} (Code {mapped["day_code"]})')
-        print(f'  Nacht:    {mapped["night_weather"]} (Code {mapped["night_code"]})')
+        if mapped['display_day_code'] is None:
+            print(f"  Tag:      {mapped['display_day_weather']}")
+        else:
+            print(f"  Tag:      {mapped['display_day_weather']} (Code {mapped['display_day_code']})")
+        if mapped['display_night_code'] is None:
+            print(f"  Nacht:    {mapped['display_night_weather']}")
+        else:
+            print(f"  Nacht:    {mapped['display_night_weather']} (Code {mapped['display_night_code']})")
         print(f'  Temp:     {mapped["temp_text"]} (Code {mapped["temp_code"]})')
         print(f'  Anom.:    {mapped["anomaly_bit"]}')
-        print(f'  Wind:     {mapped["wind_direction"]}, Stärke {mapped["wind_force"]} (Code {mapped["wind_full_code"]}, dir={mapped["wind_dir_code"]}, force={mapped["wind_force_code"]})')
+        if mapped.get('is_low_wind_section') and not mapped.get('section7_high_override'):
+            if mapped['anomaly_bit'] == 0:
+                print(f'  Wind:     {mapped["wind_direction"]}, Stärke {mapped["wind_force"]} (Code {mapped["wind_full_code"]}, dir={mapped["wind_dir_code"]}, force={mapped["wind_force_code"]})')
+            else:
+                print(f'  Wind:     -')
         print(f'  Deutung:  {mapped["section_value_text"]}')
         if show_internal:
             print('  cipher:   ' + ' '.join(f'{x:02X}' for x in cipher))
@@ -768,7 +916,7 @@ def write_csv(path: str, decoded):
     with open(path, 'w', newline='', encoding='utf-8') as f:
         w = csv.writer(f, delimiter=';')
         w.writerow([
-            'date', 'time', 'region_id', 'region_name', 'forecast_days', 'section_id', 'day_label', 'section_kind',
+            'date', 'time', 'region_id', 'region_name', 'forecast_days', 'section_id', 'day_label', 'section_kind', 'block_role', 'temperature_role',
             'payload_hex', 'info0', 'info1', 'info2',
             'day_code', 'day_weather', 'night_code', 'night_weather',
             'anomaly_bit', 'bits8_11_mode', 'bits8_11_raw_code',
@@ -782,7 +930,7 @@ def write_csv(path: str, decoded):
         for r, payload, cipher, key, plain, mapped in decoded:
             w.writerow([
                 f'{r.dd:02d}.{r.mo:02d}.{r.yy:02d}', f'{r.hh:02d}:{r.mm:02d}:{r.ss:02d}',
-                mapped['region_id'], mapped['region_name'], mapped['forecast_days'], mapped['section_id'], mapped['day_label'], mapped['section_kind'],
+                mapped['region_id'], mapped['region_name'], mapped['forecast_days'], mapped['section_id'], mapped['day_label'], mapped['section_kind'], mapped.get('block_role'), mapped.get('temperature_role'),
                 mapped['payload_hex'], mapped['info0_hex'], mapped['info1_hex'], mapped['info2_hex'],
                 mapped['day_code'], mapped['day_weather'], mapped['night_code'], mapped['night_weather'],
                 mapped['anomaly_bit'], mapped['bits8_11_mode'], mapped['bits8_11_raw_code'],
