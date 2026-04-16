@@ -694,46 +694,40 @@ def get_minutes_since_2200_utc_anchor(row: Row) -> int:
 
 
 def get_area_section(row: Row):
-    minutes = get_minutes_since_2200_utc_anchor(row)
+    schedule_minutes = (get_minutes_since_2200_utc_anchor(row) - 1) % (24 * 60)
 
-    # Meteotime send schema in UTC:
-    # 22:00 - 03:59  regions 0..59  -> Heute   (sections 0/1, 6 min per region)
-    # 04:00 - 09:59  regions 0..59  -> Tag 1   (sections 2/3, 6 min per region)
-    # 10:00 - 15:59  regions 0..59  -> Tag 2   (sections 4/5, 6 min per region)
-    # 16:00 - 18:59  regions 0..59  -> Tag 3   (section 6 only, 3 min per region)
-    # 19:00 - 20:29  regions 60..89 -> Heute   (2-day model, HI only)
-    # 20:30 - 21:59  regions 60..89 -> Tag 1   (2-day model, HI only)
-
-    if 0 <= minutes <= 179:          # 22:00 - 00:59 UTC
-        area = minutes // 3
+    if 0 <= schedule_minutes <= 179:
+        area = schedule_minutes // 3
         section = 0
-    elif 180 <= minutes <= 359:      # 01:00 - 03:59 UTC
-        area = (minutes - 180) // 3
+    elif 180 <= schedule_minutes <= 359:
+        area = (schedule_minutes - 180) // 3
         section = 1
-    elif 360 <= minutes <= 539:      # 04:00 - 06:59 UTC
-        area = (minutes - 360) // 3
+    elif 360 <= schedule_minutes <= 539:
+        area = (schedule_minutes - 360) // 3
         section = 2
-    elif 540 <= minutes <= 719:      # 07:00 - 09:59 UTC
-        area = (minutes - 540) // 3
+    elif 540 <= schedule_minutes <= 719:
+        area = (schedule_minutes - 540) // 3
         section = 3
-    elif 720 <= minutes <= 899:      # 10:00 - 12:59 UTC
-        area = (minutes - 720) // 3
+    elif 720 <= schedule_minutes <= 899:
+        area = (schedule_minutes - 720) // 3
         section = 4
-    elif 900 <= minutes <= 1079:     # 13:00 - 15:59 UTC
-        area = (minutes - 900) // 3
+    elif 900 <= schedule_minutes <= 1079:
+        area = (schedule_minutes - 900) // 3
         section = 5
-    elif 1080 <= minutes <= 1259:    # 16:00 - 18:59 UTC
-        area = (minutes - 1080) // 3
+    elif 1080 <= schedule_minutes <= 1169:
+        area = (schedule_minutes - 1080) // 3
         section = 6
-    elif 1260 <= minutes <= 1349:    # 19:00 - 20:29 UTC
-        area = 60 + ((minutes - 1260) // 3)
+    elif 1170 <= schedule_minutes <= 1259:
+        area = (schedule_minutes - 1170) // 3
+        section = 7
+    elif 1260 <= schedule_minutes <= 1349:
+        area = 60 + ((schedule_minutes - 1260) // 3)
         section = 0
-    else:                            # 20:30 - 21:59 UTC
-        area = 60 + ((minutes - 1350) // 3)
+    else:
+        area = 60 + ((schedule_minutes - 1350) // 3)
         section = 1
 
     return area, section
-
 def add_region_section(mapped: dict, row: Row):
     area, section = get_area_section(row)
     region_name, forecast_days = get_region_meta(area)
@@ -825,7 +819,9 @@ def decode_log(rows: List[Row], limit: Optional[int] = None):
         if not (a[20] == 1 and parity_ok(a, 21, 28) and parity_ok(a, 29, 35) and parity_ok(a, 36, 58)):
             continue
         minute = (a[21] + a[22]*2 + a[23]*4 + a[24]*8) + 10*(a[25] + a[26]*2 + a[27]*4)
-        minute = (minute - 1) & 0xFF
+        #minute = (minute - 1) & 0xFF
+        minute = (minute - 1) % 60
+
         part = minute % 3
         if part == 0:
             weather = [0] * 82
