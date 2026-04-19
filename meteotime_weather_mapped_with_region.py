@@ -96,20 +96,58 @@ mByteArrLookupTable1C_3 = [
 0x08,0x00,0x0D,0x0F,0x01,0x0C,0x03,0x06,0x0B,0x04,0x09,0x05,0x0A,0x07,0x02,0x0E,
 0x03,0x0D,0x00,0x0C,0x09,0x06,0x0F,0x0B,0x01,0x0E,0x08,0x0A,0x02,0x07,0x04,0x05]
 
+#WEATHER_CODES_DAY = {
+#    0: "--", 1: "Sonnig", 2: "Leicht bewölkt", 3: "Vorwiegend bewölkt",
+#    4: "Bedeckt", 5: "Hochnebel", 6: "Nebel", 7: "Regenschauer",
+#    8: "Leichter Regen", 9: "Starker Regen", 10: "Frontengewitter",
+#    11: "Wärmegewitter", 12: "Schneeregenschauer", 13: "Schneeschauer",
+#    14: "Schneeregen", 15: "Schneefall",
+#}
+
+#WEATHER_CODES_NIGHT = {
+#    0: "--", 1: "Klar", 2: "Leicht bewölkt", 3: "Vorwiegend bewölkt",
+#    4: "Bedeckt", 5: "Hochnebel", 6: "Nebel", 7: "Regenschauer",
+#    8: "Leichter Regen", 9: "Starker Regen", 10: "Frontengewitter",
+#    11: "Wärmegewitter", 12: "Schneeregenschauer", 13: "Schneeschauer",
+#    14: "Schneeregen", 15: "Schneefall",
+#}
+
 WEATHER_CODES_DAY = {
-    0: "--", 1: "Sonnig", 2: "Leicht bewölkt", 3: "Vorwiegend bewölkt",
-    4: "Bedeckt", 5: "Hochnebel", 6: "Nebel", 7: "Regenschauer",
-    8: "Leichter Regen", 9: "Starker Regen", 10: "Frontengewitter",
-    11: "Wärmegewitter", 12: "Schneeregenschauer", 13: "Schneeschauer",
-    14: "Schneeregen", 15: "Schneefall",
+    0: "--",
+    1: "Sonnig",
+    2: "Leicht bewölkt",
+    3: "Vorwiegend bewölkt",
+    4: "Bedeckt",
+    5: "Wärmegewitter",
+    6: "Starker Regen",
+    7: "Schnee",
+    8: "Nebel",
+    9: "Schneeregen",
+    10: "Regenschauer",
+    11: "Leichter Regen",
+    12: "Schneeschauer",
+    13: "Frontengewitter",
+    14: "Hochnebel",
+    15: "Schneefall",
 }
 
 WEATHER_CODES_NIGHT = {
-    0: "--", 1: "Klar", 2: "Leicht bewölkt", 3: "Vorwiegend bewölkt",
-    4: "Bedeckt", 5: "Hochnebel", 6: "Nebel", 7: "Regenschauer",
-    8: "Leichter Regen", 9: "Starker Regen", 10: "Frontengewitter",
-    11: "Wärmegewitter", 12: "Schneeregenschauer", 13: "Schneeschauer",
-    14: "Schneeregen", 15: "Schneefall",
+    0: "--",
+    1: "Klar",
+    2: "Leicht bewölkt",
+    3: "Vorwiegend bewölkt",
+    4: "Bedeckt",
+    5: "Wärmegewitter",
+    6: "Starker Regen",
+    7: "Schnee",
+    8: "Nebel",
+    9: "Schneeregen",
+    10: "Regenschauer",
+    11: "Leichter Regen",
+    12: "Schneeschauer",
+    13: "Frontengewitter",
+    14: "Hochnebel",
+    15: "Schneefall",
 }
 
 EXTREME_CODES = {
