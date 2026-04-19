@@ -352,7 +352,7 @@ SECTION_INFO = {
     4: ("Tag 2", "Tag-Block", "12h Tag + 24h Schweres Wetter/Regen"),
     5: ("Tag 2", "Nacht-Block", "12h Nacht + 24h Wind"),
     6: ("Tag 3", "Tag-Block", "12h Tag + 24h Schweres Wetter/Regen"),
-    7: ("ungenutzt", "ungenutzt", "ungenutzt"),
+    7: ("Tag 3", "Tag-Block", "12h Tag + 24h Schweres Wetter/Regen"),
 }
 
 
@@ -763,8 +763,8 @@ def add_region_section(mapped: dict, row: Row):
     mapped['day_label'] = day_label
     mapped['section_kind'] = section_kind
     mapped['interpretation'] = interpretation
-    mapped['is_high_section'] = section in (0, 2, 4, 6)
-    mapped['is_low_wind_section'] = section in (1, 3, 5, 7)
+    mapped['is_high_section'] = section in (0, 2, 4, 6, 7)
+    mapped['is_low_wind_section'] = section in (1, 3, 5)
     mapped['section7_high_override'] = (
      ENABLE_SECTION7_OVERRIDE and section == 7 and mapped['anomaly_bit'] == 0
 )
