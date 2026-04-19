@@ -187,31 +187,13 @@ Any use of this project is at your own responsibility.
 
 ## ⚠️ Known Limitations
 
-While the decoder is stable and produces consistent results, some limitations remain due to the lack of 
-official Meteotime specifications:
+The transport and decryption pipeline is structurally consistent, but parts of the final weather-symbol interpretation remain unresolved.
 
-### 🔬 Bit-Level vs. Semantic Accuracy
-The bit-level decoding pipeline (bit extraction, nibble swapping, permutation, key derivation, decryption, and 0x2501 validation) 
-is considered reliable and verified.
-The payload structure (82-bit frame, 3-minute reconstruction) is also consistent and matches observed broadcasts.
+Most decoded values are plausible, and repeated patterns across regions and sections suggest that the decoder is not behaving randomly. 
+However, some weather-symbol combinations still appear ambiguous, especially in borderline cases such as showers vs. thunderstorms.
 
-### 🌩️ Weather Code Ambiguity
-Weather-symbol decoding is mostly stable, but a small number of edge cases remain unresolved.
-Some decoded weather codes appear inconsistent with the associated temperature or expected regional conditions.
-
-### 🔁 Redundant or Reused Fields
-Some payload values appear duplicated across sections.
-It is unclear whether this is:
-- intentional redundancy
-- or different semantic roles using identical encoding
-
-### 🧪 Empirical Interpretation
-
-This implementation therefore follows a hybrid approach:
-
-- Deterministic decoding → for all cryptographic and structural steps
-- Empirical mapping → for selected payload fields
-
-### 📌 Summary
-
-The decoder is bitwise accurate, but parts of the semantic interpretation are empirically derived due to missing official specifications.
+### Current status
+- Structural decoding: consistent
+- Region/section assignment: most likely consistent
+- Temperature, rain and wind fields: often plausible
+- Selected weather-symbol semantics: still partly empirical
