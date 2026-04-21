@@ -194,13 +194,13 @@ https://dcf77logs.de/logs
 
 Reverse engineering community contributions:
 
-https://www.brettoliver.org.uk/DCF77_ESP32_Analyzer/ESP32_DCF77_Analyzer.htm
-https://github.com/tobozo/esp32-DCF77_Analyzer_Clock
-https://github.com/mobifu1/arduino_dcf77_hkw581
-https://github.com/ottojo/MeteoDecode
-https://gist.github.com/kronoc/c669eb8cceece1ea7f7ce3f964c511ee
-https://homepages.uni-regensburg.de/~erc24492/DCF77_Zeitzeichensender/DCF77_Zeitzeichensender.html
-https://de.wikipedia.org/wiki/MeteoTime
+* https://www.brettoliver.org.uk/DCF77_ESP32_Analyzer/ESP32_DCF77_Analyzer.htm
+* https://github.com/tobozo/esp32-DCF77_Analyzer_Clock
+* https://github.com/mobifu1/arduino_dcf77_hkw581
+* https://github.com/ottojo/MeteoDecode
+* https://gist.github.com/kronoc/c669eb8cceece1ea7f7ce3f964c511ee
+* https://homepages.uni-regensburg.de/~erc24492/DCF77_Zeitzeichensender/DCF77_Zeitzeichensender.html
+* https://de.wikipedia.org/wiki/MeteoTime
 
 ---
 
