@@ -59,7 +59,6 @@ from dataclasses import dataclass
 from datetime import date
 from typing import List, Optional
 
-ENABLE_SECTION7_OVERRIDE = False
 
 LINE_RE = re.compile(
     r'^\s*([01])\s+([01]{14})\s+([01]{6})\s+([01]{8})\s+([01]{7})\s+([01]{6})\s+([01]{3})\s+([01]{5})\s+([01]{9}).*?(\d{2})\.(\d{2})\.(\d{2})\s+(\d{2}):(\d{2}):(\d{2})'
@@ -96,6 +95,8 @@ mByteArrLookupTable1C_3 = [
 0x08,0x00,0x0D,0x0F,0x01,0x0C,0x03,0x06,0x0B,0x04,0x09,0x05,0x0A,0x07,0x02,0x0E,
 0x03,0x0D,0x00,0x0C,0x09,0x06,0x0F,0x0B,0x01,0x0E,0x08,0x0A,0x02,0x07,0x04,0x05]
 
+# These are the weather codes from the document DB W-Protokoll-V 1.pdf (DB W-Protokoll-V1.0.doc).
+# These codes seem to interpret data often as "Frontengewitter" or "Nebel".
 #WEATHER_CODES_DAY = {
 #    0: "--", 1: "Sonnig", 2: "Leicht bewölkt", 3: "Vorwiegend bewölkt",
 #    4: "Bedeckt", 5: "Hochnebel", 6: "Nebel", 7: "Regenschauer",
@@ -112,6 +113,8 @@ mByteArrLookupTable1C_3 = [
 #    14: "Schneeregen", 15: "Schneefall",
 #}
 
+# These are the weather codes from the public available implementations.
+# They seem to interpret data more plausible, also compared to a hardware DCF77 weather clock.
 WEATHER_CODES_DAY = {
     0: "--",
     1: "Sonnig",
@@ -319,7 +322,7 @@ REGIONS_ALL = {
     1: "La Rochelle / Westküste Frankreich",
     2: "Paris / Pariser Becken",
     3: "Brest / Bretagne",
-    4: "Clermont-Ferrand / Zentralmassif",
+    4: "Clermont-Ferrand / Zentralmassiv",
     5: "Béziers / Languedoc-Roussillon",
     6: "Bruxelles / Benelux",
     7: "Dijon / Ostfrankreich (Burgund)",
@@ -788,7 +791,6 @@ def add_region_section(mapped: dict, row: Row):
         mapped['interpretation'] = interpretation
         mapped['is_high_section'] = False
         mapped['is_low_wind_section'] = False
-        mapped['section7_high_override'] = False
         mapped['display_day_weather'] = mapped['day_weather']
         mapped['display_day_code'] = mapped['day_code']
         mapped['display_night_weather'] = mapped['night_weather']
@@ -803,11 +805,7 @@ def add_region_section(mapped: dict, row: Row):
     mapped['interpretation'] = interpretation
     mapped['is_high_section'] = section in (0, 2, 4, 6, 7)
     mapped['is_low_wind_section'] = section in (1, 3, 5)
-    mapped['section7_high_override'] = (
-     ENABLE_SECTION7_OVERRIDE and section == 7 and mapped['anomaly_bit'] == 0
-)
-
-    if mapped['is_high_section'] or mapped['section7_high_override']:
+    if mapped['is_high_section']:
         mapped['display_day_weather'] = mapped['day_weather']
         mapped['display_day_code'] = mapped['day_code']
         mapped['display_night_weather'] = mapped['night_weather']
@@ -933,7 +931,7 @@ def print_decoded(decoded, show_internal=False):
             print(f"  Nacht:    {mapped['display_night_weather']} (Code {mapped['display_night_code']})")
         print(f'  Temp:     {mapped["temp_text"]} (Code {mapped["temp_code"]})')
         print(f'  Anom.:    {mapped["anomaly_bit"]}')
-        if mapped.get('is_low_wind_section') and not mapped.get('section7_high_override'):
+        if mapped.get('is_low_wind_section'):
             if mapped['anomaly_bit'] == 0:
                 print(f'  Wind:     {mapped["wind_direction"]}, Stärke {mapped["wind_force"]} (Code {mapped["wind_full_code"]}, dir={mapped["wind_dir_code"]}, force={mapped["wind_force_code"]})')
             else:
