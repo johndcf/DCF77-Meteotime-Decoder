@@ -209,10 +209,10 @@ Reverse engineering community contributions:
 The transport and decryption pipeline is structurally consistent, but parts of the final weather-symbol interpretation remain unresolved.
 
 Most decoded values are plausible, and repeated patterns across regions and sections suggest that the decoder is not behaving randomly. 
-However, some weather-symbol combinations still appear ambiguous, especially in borderline cases such as showers vs. thunderstorms.
+However, some weather-symbol combinations may be ambiguous, especially in borderline cases such as showers vs. thunderstorms.
 
 ### Current status
 - Structural decoding: consistent
 - Region/section assignment: most likely consistent
-- Temperature, rain and wind fields: often plausible
-- Selected weather-symbol semantics: still partly empirical
+- Temperature, rain and wind fields: plausible
+- Selected weather-symbol semantics: partly empirical
