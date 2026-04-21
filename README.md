@@ -187,10 +187,13 @@ Any use of this project is at your own responsibility.
 
 ## 🙌 Acknowledgements
 DCF77 time signal (77.5 kHz, Germany)
+
 Meteotime weather encoding system
+
 https://dcf77logs.de/logs
 
 Reverse engineering community contributions:
+
 https://www.brettoliver.org.uk/DCF77_ESP32_Analyzer/ESP32_DCF77_Analyzer.htm
 https://github.com/tobozo/esp32-DCF77_Analyzer_Clock
 https://github.com/mobifu1/arduino_dcf77_hkw581
