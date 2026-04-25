@@ -211,6 +211,26 @@ The transport and decryption pipeline is structurally consistent, but parts of t
 Most decoded values are plausible, and repeated patterns across regions and sections suggest that the decoder is not behaving randomly. 
 However, some weather-symbol combinations may be ambiguous, especially in borderline cases such as showers vs. thunderstorms.
 
+Some DCF77 Meteotime weather receivers display an additional night/minimum
+temperature for day 3 / the fourth forecast day.
+
+The decoder currently confirms the following fields for this slot:
+
+- bits 0..3: day weather symbol
+- bits 4..7: night weather symbol
+- bits 16..21: day/maximum temperature
+
+These values match observations from a hardware Meteotime receiver.
+
+However, the displayed night/minimum temperature could not yet be mapped to a
+simple 6-bit temperature field in bits 8..15. Several candidate bit windows
+(bits 8..13, 9..14 and 10..15, including bit-reversed and inverted variants)
+were tested, but none matched the receiver values consistently.
+
+Therefore, the day 3 minimum/night temperature is currently not decoded. It may
+be generated internally by the receiver, stored from another transmission block,
+or encoded in a non-obvious/proprietary way.
+
 ### Current status
 - Structural decoding: consistent
 - Region/section assignment: most likely consistent
